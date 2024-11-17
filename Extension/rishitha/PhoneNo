@@ -1,0 +1,31 @@
+package service;
+
+import java.util.Scanner;
+
+public class PhoneNo {
+    
+    public static void main(String[] args) {
+        // Call the method to get and validate the phone number
+        getPhoneNumber();
+    }
+    
+    // Method to ask for phone number and validate its length
+    public static void getPhoneNumber() {
+        Scanner scanner = new Scanner(System.in);
+        String phoneNumber;
+
+        // Loop until a valid 10-digit phone number is entered
+        while (true) {
+            System.out.print("Enter your 10-digit phone number: ");
+            phoneNumber = scanner.nextLine();
+
+            // Check if the phone number is exactly 10 digits
+            if (phoneNumber.length() == 10 && phoneNumber.matches("\\d{10}")) {
+                System.out.println("Phone number is valid.");
+                break;  // Exit the loop if phone number is valid
+            } else {
+                System.out.println("Invalid phone number! Please enter exactly 10 digits.");
+            }
+        }
+    }
+}
