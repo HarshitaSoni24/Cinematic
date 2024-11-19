@@ -2,6 +2,7 @@ package src.pkg;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.List;
 
 public class MovieDatabase {
     private ArrayList<Movie> movies;  // List to hold all movies
@@ -18,6 +19,46 @@ public class MovieDatabase {
         availableSnacks = new ArrayList<>();
         loadUsers(); // Load users from file on initialization
         loadSnacks(); // Load available snacks
+    }
+
+    // Method to get the list of movies
+    public List<Movie> getMovies() {
+        return movies;  // Return the list of movies
+    }
+
+    // Method to edit a movie
+    public void editMovie(int index, String newTitle, String newGenre, int newDuration, double newRating, double newPrice) {
+        if (index >= 0 && index < movies.size()) {
+            Movie movie = movies.get(index);
+            movie.setTitle(newTitle);
+            movie.setGenre(newGenre);
+            movie.setDuration(newDuration);
+            movie.setRating(newRating);
+            movie.setPrice(newPrice);
+        } else {
+            System.out.println("Invalid movie index.");
+        }
+    }
+
+    // Method to delete a movie
+    public void deleteMovie(int index) {
+        if (index >= 0 && index < movies.size()) {
+            movies.remove(index);
+            System.out.println("Movie deleted successfully!");
+        } else {
+            System.out.println("Invalid movie index.");
+        }
+    }
+
+    // Method to display all users
+    public void displayUsers() {
+        if (users.isEmpty()) {
+            System.out.println("No users available.");
+        } else {
+            for (User user : users) {
+                System.out.println(user);  // Assuming the User class has a meaningful toString() method
+            }
+        }
     }
 
     // Load users from the file
@@ -65,60 +106,6 @@ public class MovieDatabase {
         return false;
     }
 
-    // Method to display a user's bookings
-    public void displayUserBookings(String username) {
-        boolean foundBookings = false;
-        for (Booking booking : bookings) {
-            if (booking.getUsername().equals(username)) {
-                System.out.println("Booking ID: " + booking.getBookingId() +
-                                   ", Movie: " + booking.getMovieName() +
-                                   ", Showtime: " + booking.getShowtime() +
-                                   ", Date: " + booking.getDate() +
-                                   ", Snacks: " + booking.getSelectedSnacks());
-                foundBookings = true;
-            }
-        }
-        if (!foundBookings) {
-            System.out.println("No bookings found.");
-        }
-    }
-
-    // Method to cancel a booking
-    public boolean cancelBooking(String username, int bookingId) {
-        for (Booking booking : bookings) {
-            if (booking.getUsername().equals(username) && booking.getBookingId() == bookingId) {
-                bookings.remove(booking);  // Remove the booking from the list
-                System.out.println("Booking canceled successfully.");
-                return true;
-            }
-        }
-        System.out.println("Booking not found for the given username and booking ID.");
-        return false;
-    }
-
-    // Method to add a booking (with snacks)
-    // Modify the addBooking method in MovieDatabase to handle snacks
-    public void addBooking(String username, String movieName, String showtime, String date, ArrayList<BeverageSnack> selectedSnacks) {
-        Booking newBooking = new Booking(username, movieName, showtime, date, selectedSnacks);
-        bookings.add(newBooking);
-        System.out.println("Booking added: " + newBooking);
-    }
-
-
-    // Method to display all users (admin-only functionality)
-    public void displayUsers() {
-        for (User user : users) {
-            System.out.println("Username: " + user.getUsername() + ", Name: " + user.getName());
-        }
-    }
-
-    // Method to ban a user (admin-only functionality)
-    public void banUser(String username) {
-        users.removeIf(user -> user.getUsername().equals(username));
-        System.out.println("User " + username + " has been banned.");
-        saveUsers();  // Save after banning a user
-    }
-
     // Method to display all movies
     public void displayMovies() {
         if (movies.isEmpty()) {
@@ -137,25 +124,79 @@ public class MovieDatabase {
         System.out.println("Movie added: " + newMovie);
     }
 
-    // Method to delete a movie by title
-    public void deleteMovie(String title) {
-        Movie movieToDelete = null;
-        for (Movie movie : movies) {
-            if (movie.getTitle().equalsIgnoreCase(title)) {
-                movieToDelete = movie;
-                break;
+    public void displayUserBookings(String username) {
+        boolean foundBookings = false;
+        for (Booking booking : bookings) {
+            if (booking.getUsername().equals(username)) {
+                System.out.println(booking);  // Assuming Booking class has a meaningful toString() method
+                foundBookings = true;
             }
         }
 
-        if (movieToDelete != null) {
-            movies.remove(movieToDelete);
-            System.out.println("Movie '" + title + "' has been deleted.");
-        } else {
-            System.out.println("Movie not found with title: " + title);
+        if (!foundBookings) {
+            System.out.println("No bookings found for user: " + username);
         }
     }
+    
+    // Method to handle movie ticket bookings
+    public void bookTickets(String currentUser, String movieTitle, String theatreName, String showtime, int numberOfTickets, String date, ArrayList<BeverageSnack> selectedSnacks) {
+        // Locate the movie by title
+        Movie movie = movies.stream()
+                            .filter(m -> m.getTitle().equalsIgnoreCase(movieTitle))
+                            .findFirst()
+                            .orElse(null);
 
-    // Method to display available snacks
+        if (movie == null) {
+            System.out.println("Movie not found.");
+            return;
+        }
+
+        // Locate or validate the theatre
+        Theatre theatre = movie.getTheatres().stream()
+                               .filter(t -> t.getName().equalsIgnoreCase(theatreName))
+                               .findFirst()
+                               .orElse(null);
+
+        if (theatre == null) {
+            System.out.println("Theatre not found for this movie.");
+            return;
+        }
+
+        // Verify tickets availability
+        if (theatre.getRemainingSeats(showtime) < numberOfTickets) {
+            System.out.println("Not enough available seats.");
+            return;
+        }
+
+        // Proceed with booking
+        Booking newBooking = new Booking(currentUser, movieTitle, showtime, date, selectedSnacks);
+        bookings.add(newBooking);
+        theatre.reserveSeats(showtime, generateSeatList(numberOfTickets));  // Reserve the seats
+
+        System.out.println("Booking successful!");
+    }
+
+    private ArrayList<String> generateSeatList(int numberOfSeats) {
+        ArrayList<String> selectedSeats = new ArrayList<>();
+        for (int i = 1; i <= numberOfSeats; i++) {
+            selectedSeats.add("Seat " + i);
+        }
+        return selectedSeats;
+    }
+
+    // Method to ban a user based on their username
+    public boolean banUser(String username) {
+        for (User user : users) {
+            if (user.getUsername().equals(username)) {
+                user.setBanned(true);  // Set the user as banned
+                return true;  // Successfully banned the user
+            }
+        }
+        return false;  // User not found
+    }
+    
+
+    // Method to view all available snacks
     public void displayAvailableSnacks() {
         if (availableSnacks.isEmpty()) {
             System.out.println("No snacks available.");
